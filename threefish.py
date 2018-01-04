@@ -105,8 +105,8 @@ def permute(words_array):
     words_array.reverse()
     return words_array
 
-
-def threefish_cipher(plain_text, key, size):
+#Chiffrement ECB
+def cipher(plain_text, key, size):
     #Get the number of blocs {4, 8, 16}
     n = size // 64
     # Divise plain text bloc
@@ -128,8 +128,8 @@ def threefish_cipher(plain_text, key, size):
     return joint.join(text_blocs)
 
 
-
-def threefish_decipher(cipher_text, key, size):
+#Déchiffrement ECB
+def decipher(cipher_text, key, size):
     # Get the number of blocs {4, 8, 16}
     n = size // 64
     # Divise plain text bloc
@@ -156,12 +156,52 @@ def threefish_decipher(cipher_text, key, size):
     return joint.join(text_blocs)
 
 
-plain_text = "0001101111010001000110111101100011011110100010001101111011010101010011111110000011010001000100101010100111111100000110100010001000011011110100010001101111010001101111010001000110111101101010101001111111000001101000100010101010101001111111000001101000100010"
-key = "1101010011111110110111110111101101010101001110010001101110010001101100011011110100010000101010101101010010101011110000011010001000101111010100111110000110101010011111110000011010001000100001101111010001000110000011010001000100001101111010001000110111101000"
+#Chiffrement CBC
+def cbc_cipher(plain_text, key, size):
+    #Get the number of blocs {4, 8, 16}
+    n = size // 64
+    # Divise plain text bloc
+    text_blocs = sub_bytes(plain_text)
+    # Generate all the subkeys
+    sub_keys_array = keys_generator(key, n)
+    #Start the 76 rounds
+    for i in range(0, 76):
+        # get sub keys for this round and make the addition [64]
+        if (i % 4 == 0 or i == 75):
+            sub_keys = sub_keys_array[round(i / 4)]
+            for id in range(0, n):
+                text_blocs[id] = modulo_2_64(binary_addition(text_blocs[id], sub_keys[id]))
+        # mix the words two by two R = 49
+        text_blocs = mix(text_blocs, 49)
+        # permute the words
+        text_blocs = permute(text_blocs)
+    joint = "";
+    return joint.join(text_blocs)
 
 
-print(plain_text)
-cipher_text = threefish_cipher(plain_text, key, 256)
-print(cipher_text)
-print(threefish_decipher(cipher_text, key, 256))
+#Déchiffrement CBC
+def cbc_decipher(cipher_text, key, size):
+    # Get the number of blocs {4, 8, 16}
+    n = size // 64
+    # Divise plain text bloc
+    text_blocs = sub_bytes(cipher_text)
+    # Generate all the subkeys
+    sub_keys_array = keys_generator(key, n)
+    for i in range(0, 76):
+        # permute the words
+        text_blocs = permute(text_blocs)
+        # mix the words two by two R = 64 - 49 = 15
+        text_blocs = mix_reverse(text_blocs, 15)
+        # get sub keys for this round and make the addition [64]
+        if (i== 0 or i % 4 == 3 or i == 75):
+            j = round(i / 4) + 1
+            sub_keys = sub_keys_array[-j]
+            for id in range(0, n):
+                text_bloc = text_blocs[id]
+                sub_key = sub_keys[id]
+                if (int(text_bloc, 2) < int(sub_key, 2)):
+                    text_bloc = "1" + text_bloc
+                text_blocs[id] = modulo_2_64(binary_substraction(text_bloc, sub_key))
 
+    joint = "";
+    return joint.join(text_blocs)
